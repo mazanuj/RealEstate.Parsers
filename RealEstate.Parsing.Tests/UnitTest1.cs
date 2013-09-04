@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace RealEstate.Parsers.Tests
+namespace RealEstate.Parsing.Tests
 {
     [TestClass]
     public class UnitTest1

@@ -3,10 +3,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>cfff8c2c-8295-44fc-b779-db824c6f896c</ProjectGuid>
+    <ProjectGuid>{6E9A2476-0ED7-4572-A80E-DCEB9A13BADF}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>RealEstate.Parsers.Tests</RootNamespace>
+    <RootNamespace>RealEstate.Parsing.Tests</RootNamespace>
     <AssemblyName>RealEstate.Parsers.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -55,6 +55,12 @@
   <ItemGroup>
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RealEstate.Parsing\RealEstate.Parsing.csproj">
+      <Project>{c3e0916a-3c00-4543-8ab3-ff43084ae124}</Project>
+      <Name>RealEstate.Parsing</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
