@@ -13,10 +13,17 @@ namespace RealEstate.Parsing
 
     public class Advert
     {
+        public Advert()
+        {
+            Usedtype = Parsing.Usedtype.Used;
+        }
+
         public int Id { get; set; } //+
         public string Url { get; set; } //+
 
         public string Title { get; set; } //+
+
+        public Int64 Price { get; set; } //+
 
         public string Name { get; set; }  //+
         public string PhoneNumber { get; set; }
@@ -24,11 +31,11 @@ namespace RealEstate.Parsing
 
         public string City { get; set; } //+
         public string Distinct { get; set; }
-        public string Address { get; set; }
-        public string MetroStation { get; set; }
+        public string Address { get; set; } //+
+        public string MetroStation { get; set; } //+
 
         public string MessageShort { get; set; }
-        public string MessageFull { get; set; }
+        public string MessageFull { get; set; } //+
 
         public string Rooms { get; set; } //+
 
@@ -40,8 +47,8 @@ namespace RealEstate.Parsing
         public short FloorTotal { get; set; } //+
 
         public RealEstateType RealEstateType { get; set; }
-        public Usedtype Usedtype { get; set; }
-        public AdvertType AdvertType { get; set; }
+        public Usedtype Usedtype { get; set; } //+
+        public AdvertType AdvertType { get; set; } //+
 
         public bool isGold { get; set; }
 
@@ -50,14 +57,18 @@ namespace RealEstate.Parsing
         public string Tag { get; set; }
 
         public DateTime DateSite{ get; set; } //+
-        public DateTime DateUpdate { get; set; }
+        public DateTime DateUpdate { get; set; } //+
 
         public virtual ICollection<Image> Images { get; set; }
 
         public override string ToString()
         {
-            return String.Format("Rooms: {0}, Area: {1:#.0#}, Floor: {2}, Floor total: {3}, Seller: {4}, City: {5} , Adress: {6}", 
-                this.Rooms, this.AreaFull, this.Floor, this.FloorTotal, this.Name, this.City, this.Address );
+            return String.Format(
+                "Rooms: {0}, Area: {1:#.0#}, Floor: {2}, Floor total: {3}, Seller: {4}, "
+              + "City: {5} , Adress: {6}, Metro: {7}, AdverType: {8}, UsedType: {9},Price: {10}", 
+                this.Rooms, this.AreaFull, this.Floor, this.FloorTotal, this.Name, 
+                this.City, this.Address, this.MetroStation, this.AdvertType, this.Usedtype ,
+                this.Price );
         }
 
     }
@@ -73,20 +84,24 @@ namespace RealEstate.Parsing
 
     public enum RealEstateType
     {
+        All,
         Flat,
         House
     }
 
     public enum Usedtype
     {
+        None,
         New,
         Used
     }
 
     public enum AdvertType
     {
+        All,
+        Buy,
         Sell,
-        RentAnForADay,
-        RentAnForAMonth,
+        Rent,
+        Pass
     }
 }

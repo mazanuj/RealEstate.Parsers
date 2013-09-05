@@ -7,6 +7,9 @@ using System.Text;
 using System.Threading;
 using HtmlAgilityPack;
 using System.Web;
+using System.Text.RegularExpressions;
+using System.Drawing;
+using System.IO;
 
 namespace RealEstate.Parsing.Parsers
 {
@@ -57,11 +60,60 @@ namespace RealEstate.Parsing.Parsers
 
         }
 
+        public byte[] DownloadImage(string url, string userAgent, WebProxy proxy, CancellationToken cs)
+        {
+            Trace.WriteLine("Sending request to " + url);
+
+            string HtmlResult = null;
+
+            HttpWebRequest myHttpWebRequest = (HttpWebRequest)WebRequest.Create(url);
+            myHttpWebRequest.AllowAutoRedirect = true;
+            myHttpWebRequest.Proxy = proxy ?? WebRequest.DefaultWebProxy;
+            myHttpWebRequest.UserAgent = userAgent;
+
+            var asyncResult = myHttpWebRequest.BeginGetResponse(null, null);
+
+            WaitHandle.WaitAny(new[] { asyncResult.AsyncWaitHandle, cs.WaitHandle });
+            if (cs.IsCancellationRequested)
+            {
+                myHttpWebRequest.Abort();
+                throw new OperationCanceledException();
+            }
+
+            byte[] result;
+            byte[] buffer = new byte[4096];
+
+            using (WebResponse response = myHttpWebRequest.EndGetResponse(asyncResult))
+            {
+                using (Stream responseStream = response.GetResponseStream())
+                {
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    {
+                        int count = 0;
+                        do
+                        {
+                            count = responseStream.Read(buffer, 0, buffer.Length);
+                            memoryStream.Write(buffer, 0, count);
+
+                        } while (count != 0);
+
+                        result = memoryStream.ToArray();
+
+                    }
+                }
+            }
+
+            Trace.WriteLine("Response is received");
+
+            return result;
+        }
+
         public void Test()
         {
             //var url = "http://www.avito.ru/moskva/kvartiry/prodam/vtorichka?s=1";
             //var url = "http://www.avito.ru/moskva/kvartiry/prodam/studii/vtorichka?s=1";
-            var url = "http://www.avito.ru/moskva/kvartiry/prodam?s=1";
+            var url = "http://www.avito.ru/moskva/kvartiry/prodam/novostroyka?s=1";
+            //var url = "http://www.avito.ru/moskva/kvartiry/prodam?s=1";
 
             var toDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day).AddDays(0);
 
@@ -274,7 +326,7 @@ namespace RealEstate.Parsing.Parsers
             return null;
         }
 
-        private string ParseAddress(HtmlDocument full)
+        private void ParseAddress(HtmlDocument full, Advert advert)
         {
             var addressLabel = full.DocumentNode.SelectSingleNode(@"//dt[@class='description_term']/span[text() = 'Адрес']");
             if (addressLabel != null)
@@ -289,9 +341,193 @@ namespace RealEstate.Parsing.Parsers
                         if (link != null)
                             link.Remove();
 
-                        return Normalize(addressBlock.InnerText).TrimEnd(new []{','});
+                        var metro = addressBlock.SelectSingleNode(@"./span");
+                        if (metro != null)
+                        {
+                            advert.MetroStation = metro.InnerText.TrimEnd(new[] { ',' });
+                            metro.Remove();
+                        }
+
+                        advert.Address = Normalize(addressBlock.InnerText).TrimEnd(new[] { ',' }).TrimStart(new[] { ',' });
                     }
                 }
+            }
+        }
+
+        private Int64 ParsePrice(HtmlDocument full)
+        {
+            var block = full.DocumentNode.SelectSingleNode(@".//span[contains(@class,'p_i_price t-item-price')]/strong/span");
+            if (block != null)
+            {
+                return Int64.Parse(block.InnerText.Replace("&nbsp;", ""));
+            }
+
+            throw new Exception("Can't find price");
+        }
+
+        private static AdvertType MapType(string param)
+        {
+            var dealMap = new Dictionary<string, AdvertType> {
+                { "201_1058", AdvertType.Buy },
+                { "201_1060", AdvertType.Pass },
+                { "201_1061", AdvertType.Rent },
+                { "201_1059", AdvertType.Sell },
+                { "202_1064", AdvertType.Sell },
+                { "202_1065", AdvertType.Pass },
+                { "202_1063", AdvertType.Buy },
+                { "202_1066", AdvertType.Rent },
+                { "203_1069", AdvertType.Sell },
+                { "203_1068", AdvertType.Buy },
+                { "204_1074", AdvertType.Sell },
+                { "204_1075", AdvertType.Pass },
+                { "204_1073", AdvertType.Buy },
+                { "204_1076", AdvertType.Rent },
+                { "536_5545", AdvertType.Sell },
+                { "536_5546", AdvertType.Rent },
+            };
+
+            return dealMap.ContainsKey(param) ? dealMap[param] : AdvertType.All;
+        }
+
+        private static Usedtype MapUsedtype(string param)
+        {
+            var subTypeMap = new Dictionary<string, Usedtype> {
+                { "499_5255", Usedtype.New },
+            };
+
+            return subTypeMap.ContainsKey(param) ? subTypeMap[param] : Usedtype.None;
+        }
+
+        private void ParseCategory(HtmlDocument full, Advert advert)
+        {
+            var nodes = full.DocumentNode.SelectNodes(@"//dl[@class='description description-expanded']/dd[@class='item-params c-1']/div/a");
+            if (nodes != null && nodes.Count > 0)
+            {
+                foreach (var node in nodes)
+                {
+                    if (node.Attributes.Contains("href"))
+                    {
+                        var href = node.Attributes["href"].Value;
+
+                        var paramsRegex = new Regex(@"params=([0-9\._]+)").Match(href);
+                        if (paramsRegex.Success)
+                        {
+                            foreach (var param in paramsRegex.Groups[1].Value.Split('.'))
+                            {
+                                var type = MapType(param);
+                                if (type != AdvertType.All)
+                                {
+                                    advert.AdvertType = type;
+                                    continue;
+                                }
+
+                                var usedType = MapUsedtype(param);
+                                if (usedType != Usedtype.None)
+                                {
+                                    advert.Usedtype = usedType;
+                                    continue;
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+
+        }
+
+        private string ParseDescription(HtmlDocument full)
+        {
+            var desc = full.GetElementbyId("desc_text");
+            if (desc != null)
+                return Normalize(desc.InnerText);
+
+            return "";
+        }
+
+        private List<Image> ParsePhotos(HtmlDocument full)
+        {
+            var result = new List<Image>();
+
+            var gallery = full.DocumentNode.SelectSingleNode("//div[@class='gallery scrollable']/div[@class='items']");
+            if (gallery != null)
+            {
+                foreach (var link in gallery.SelectNodes("//div[contains(@class, 'll fit')]/a"))
+                {
+                    if (result.Count > 5)
+                        break;
+
+                    try
+                    {
+                        var href = link.Attributes["href"];
+                        if (href != null && href.Value != null)
+                        {
+                            var src = Normalize(href.Value).TrimStart('/');
+
+                            result.Add(new Image() { URl = src });
+                        }
+                    }
+                    catch (Exception exc)
+                    {
+                        if (result.Count > 0)
+                            continue;
+
+                        throw;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private string ParsePhoneImageUrl(HtmlDocument full, string itemId)
+        {
+            var script = full.DocumentNode.SelectSingleNode("//div[@class='item']/script");
+            if (script == null)
+                return null;
+
+            var urlRegex = new Regex(@"var item_url = '([^']+)").Match(script.InnerText);
+            var itemRegex = new Regex(@"item_phone = '([^']+)").Match(script.InnerText);
+
+            if (urlRegex.Success && itemRegex.Success)
+            {
+                var itemUrl = urlRegex.Groups[1].Value;
+                var itemPhone = itemRegex.Groups[1].Value;
+
+                var pre = new List<string>();
+                foreach (Match item in new Regex("[0-9a-f]+", RegexOptions.IgnoreCase).Matches(itemPhone))
+                    pre.Add(item.Value);
+
+                if (Convert.ToInt64(itemId) % 2 == 0)
+                    pre.Reverse();
+
+                var mixed = string.Join("", pre.ToArray());
+                var s = mixed.Length;
+                var pkey = "";
+
+                for (var k = 0; k < s; ++k)
+                    if (k % 3 == 0)
+                        pkey += mixed[k];
+
+                return string.Format(@"http://www.avito.ru/items/phone/{0}?pkey={1}", itemUrl, pkey);
+            }
+
+            return null;
+        }
+
+        private string ParsePhone(HtmlDocument full)
+        {
+            var itemId = Normalize(full.GetElementbyId("item_id").InnerText);
+
+            var phoneUrl = ParsePhoneImageUrl(full, itemId);
+            if (phoneUrl != null)
+            {
+                var phoneImage = DownloadImage(phoneUrl, UserAgents.GetRandomUserAgent(), null, CancellationToken.None);
+                var phoneText = new RealEstateParser.Ocr.AvitoOcr().Recognize(phoneImage);
+
+                System.IO.File.WriteAllBytes(@"c:/test/" + phoneImage.GetHashCode() + ".png", phoneImage);
+
+                //return new PhoneParser().Parse(phoneText);
             }
 
             return null;
@@ -300,6 +536,8 @@ namespace RealEstate.Parsing.Parsers
         private Advert Parse(AdvertHeader header)
         {
             Advert advert = new Advert();
+
+            advert.DateUpdate = DateTime.Now;
 
             advert.DateSite = header.DateSite;
             advert.Url = header.Url;
@@ -317,8 +555,15 @@ namespace RealEstate.Parsing.Parsers
 
             advert.Name = ParseSeller(page);
             advert.City = ParseCity(page);
-            advert.Address = ParseAddress(page);
+            ParseAddress(page, advert);
 
+            ParseCategory(page, advert);
+
+            advert.MessageFull = ParseDescription(page);
+            advert.Price = ParsePrice(page);
+
+            advert.Images = ParsePhotos(page);
+            advert.PhoneNumber = ParsePhone(page);
 
             return advert;
         }
