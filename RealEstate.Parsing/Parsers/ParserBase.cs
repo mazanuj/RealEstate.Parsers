@@ -14,6 +14,6 @@ namespace RealEstate.Parsing.Parsers
 
         public abstract List<Advert> ParsePage(string url);
 
-        protected const int MAXCOUNT = 20;
+        protected const int MAXCOUNT = 3;
     }
 }

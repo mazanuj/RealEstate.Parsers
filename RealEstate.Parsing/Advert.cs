@@ -18,11 +18,11 @@ namespace RealEstate.Parsing
 
         public string Title { get; set; } //+
 
-        public string Name { get; set; }
+        public string Name { get; set; }  //+
         public string PhoneNumber { get; set; }
         public string Email { get; set; }
 
-        public string City { get; set; }
+        public string City { get; set; } //+
         public string Distinct { get; set; }
         public string Address { get; set; }
         public string MetroStation { get; set; }
@@ -53,6 +53,12 @@ namespace RealEstate.Parsing
         public DateTime DateUpdate { get; set; }
 
         public virtual ICollection<Image> Images { get; set; }
+
+        public override string ToString()
+        {
+            return String.Format("Rooms: {0}, Area: {1:#.0#}, Floor: {2}, Floor total: {3}, Seller: {4}, City: {5} , Adress: {6}", 
+                this.Rooms, this.AreaFull, this.Floor, this.FloorTotal, this.Name, this.City, this.Address );
+        }
 
     }
 

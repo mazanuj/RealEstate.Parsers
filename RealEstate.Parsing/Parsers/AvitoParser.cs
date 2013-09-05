@@ -69,12 +69,12 @@ namespace RealEstate.Parsing.Parsers
 
             List<Advert> adverts = new List<Advert>();
 
-            foreach (var head in headers.Take(10))
+            foreach (var head in headers.Take(3))
             {
                 adverts.Add(Parse(head));
             }
 
-            adverts.ForEach(s => Console.WriteLine("Rooms: {0}, Area: {1:#.0#}, Floor: {2}, Floor total: {3},", s.Rooms, s.AreaFull, s.Floor, s.FloorTotal));
+            adverts.ForEach(s => Console.WriteLine(s.ToString()));
 
         }
 
@@ -125,10 +125,23 @@ namespace RealEstate.Parsing.Parsers
                             Url = link
                         });
                 }
-            } 
+            }
             while (headers.Count != oldCount && headers.Count < MAXCOUNT);
 
             return headers;
+        }
+
+        private string ParseSeller(HtmlDocument full)
+        {
+            var seller = full.GetElementbyId("seller");
+            if (seller != null)
+            {
+                var strong = seller.SelectSingleNode(@".//strong");
+                if (strong != null)
+                    return Normalize(strong.InnerText);
+            }
+
+            throw new Exception("Can't get seller");
         }
 
         private string ParseLinkToFullDescription(HtmlNode tier)
@@ -238,11 +251,50 @@ namespace RealEstate.Parsing.Parsers
 
                 }
                 else
+                {
+                    Console.WriteLine(title);
                     throw new Exception("unknow header");
+                }
 
             }
             else
                 throw new Exception("none header");
+        }
+
+        private string ParseCity(HtmlDocument full)
+        {
+            var cityLabel = full.GetElementbyId("map");
+            if (cityLabel != null)
+            {
+                var city = cityLabel.ChildNodes.First(s => s.Name == "a");
+                if (city != null)
+                    return Normalize(city.InnerText);
+            }
+
+            return null;
+        }
+
+        private string ParseAddress(HtmlDocument full)
+        {
+            var addressLabel = full.DocumentNode.SelectSingleNode(@"//dt[@class='description_term']/span[text() = 'Адрес']");
+            if (addressLabel != null)
+            {
+                var nextBlock = addressLabel.ParentNode.NextSibling;
+                if (nextBlock != null)
+                {
+                    var addressBlock = nextBlock.NextSibling;
+                    if (addressBlock != null)
+                    {
+                        var link = addressBlock.SelectSingleNode(@"./a");
+                        if (link != null)
+                            link.Remove();
+
+                        return Normalize(addressBlock.InnerText).TrimEnd(new []{','});
+                    }
+                }
+            }
+
+            return null;
         }
 
         private Advert Parse(AdvertHeader header)
@@ -263,6 +315,9 @@ namespace RealEstate.Parsing.Parsers
 
             ParseTitle(page, advert);
 
+            advert.Name = ParseSeller(page);
+            advert.City = ParseCity(page);
+            advert.Address = ParseAddress(page);
 
 
             return advert;
