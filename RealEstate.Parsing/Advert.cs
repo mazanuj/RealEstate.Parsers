@@ -13,10 +13,10 @@ namespace RealEstate.Parsing
 
     public class Advert
     {
-        public int Id { get; set; }
-        public string Url { get; set; }
+        public int Id { get; set; } //+
+        public string Url { get; set; } //+
 
-        public string Title { get; set; }
+        public string Title { get; set; } //+
 
         public string Name { get; set; }
         public string PhoneNumber { get; set; }
@@ -30,14 +30,14 @@ namespace RealEstate.Parsing
         public string MessageShort { get; set; }
         public string MessageFull { get; set; }
 
-        public short Rooms { get; set; }
+        public string Rooms { get; set; } //+
 
-        public float AreaFull { get; set; }
+        public float AreaFull { get; set; } //+
         public float AreaLiving { get; set; }
         public float AreaKitchen { get; set; }
 
-        public short Floor { get; set; }
-        public short FloorTotal { get; set; }
+        public short Floor { get; set; } //+
+        public short FloorTotal { get; set; } //+
 
         public RealEstateType RealEstateType { get; set; }
         public Usedtype Usedtype { get; set; }
@@ -49,7 +49,7 @@ namespace RealEstate.Parsing
 
         public string Tag { get; set; }
 
-        public DateTime DateSite{ get; set; }
+        public DateTime DateSite{ get; set; } //+
         public DateTime DateUpdate { get; set; }
 
         public virtual ICollection<Image> Images { get; set; }

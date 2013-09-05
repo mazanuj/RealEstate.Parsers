@@ -34,7 +34,7 @@ namespace RealEstate.Parsing.Parsers
             string HtmlResult = null;
 
             HttpWebRequest myHttpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-            myHttpWebRequest.AllowAutoRedirect = false;
+            myHttpWebRequest.AllowAutoRedirect = true;
             myHttpWebRequest.Proxy = proxy ?? WebRequest.DefaultWebProxy;
             myHttpWebRequest.UserAgent = userAgent;
 
@@ -60,19 +60,47 @@ namespace RealEstate.Parsing.Parsers
         public void Test()
         {
             //var url = "http://www.avito.ru/moskva/kvartiry/prodam/vtorichka?s=1";
-            var url = "http://www.avito.ru/moskva/kvartiry/prodam/studii/vtorichka?s=1";
-            var toDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day).AddDays(-7);
+            //var url = "http://www.avito.ru/moskva/kvartiry/prodam/studii/vtorichka?s=1";
+            var url = "http://www.avito.ru/moskva/kvartiry/prodam?s=1";
 
+            var toDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day).AddDays(0);
+
+            List<AdvertHeader> headers = LoadHeaders(url, toDate);
+
+            List<Advert> adverts = new List<Advert>();
+
+            foreach (var head in headers.Take(10))
+            {
+                adverts.Add(Parse(head));
+            }
+
+            adverts.ForEach(s => Console.WriteLine("Rooms: {0}, Area: {1:#.0#}, Floor: {2}, Floor total: {3},", s.Rooms, s.AreaFull, s.Floor, s.FloorTotal));
+
+        }
+
+        private List<AdvertHeader> LoadHeaders(string url, DateTime toDate)
+        {
             List<AdvertHeader> headers = new List<AdvertHeader>();
             int oldCount = -1;
             int index = 0;
 
-            while (headers.Count != oldCount && headers.Count < MAXCOUNT)
+            do
             {
                 oldCount = headers.Count;
                 index++;
 
-                var result = this.DownloadPage(url + "&p=" + index, UserAgents.GetRandomUserAgent(), null, CancellationToken.None);
+                string result;
+
+                try
+                {
+                    result = this.DownloadPage(url + "&p=" + index, UserAgents.GetRandomUserAgent(), null, CancellationToken.None);
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Can't dowload");
+                    break;
+                }
 
                 Console.WriteLine("Downloaded");
                 HtmlDocument page = new HtmlDocument();
@@ -80,7 +108,8 @@ namespace RealEstate.Parsing.Parsers
 
                 Console.WriteLine("parsed");
 
-
+                if (page.DocumentNode.SelectSingleNode(@"//h2[contains(@class,'nulus_h2')]") != null)
+                    break;
 
                 foreach (HtmlNode tier in page.DocumentNode.SelectNodes(@"//div[contains(@class,'t_i_i')]"))
                 {
@@ -96,10 +125,10 @@ namespace RealEstate.Parsing.Parsers
                             Url = link
                         });
                 }
-            }
+            } 
+            while (headers.Count != oldCount && headers.Count < MAXCOUNT);
 
-            headers.ForEach(s => Console.WriteLine(s.Url)); 
-
+            return headers;
         }
 
         private string ParseLinkToFullDescription(HtmlNode tier)
@@ -178,6 +207,65 @@ namespace RealEstate.Parsing.Parsers
             }
 
             throw new Exception("Can't parse date information");
+        }
+
+        private void ParseTitle(HtmlDocument full, Advert advert)
+        {
+            var header = full.DocumentNode.SelectSingleNode(@".//h1[contains(@class,'item_title')]");
+            if (header != null)
+            {
+                var title = Normalize(header.InnerText);
+                advert.Title = title;
+
+                var parts = title.Split(',');
+                if (parts.Count() == 3)
+                {
+                    advert.Rooms = parts[0];
+
+                    float area;
+                    float.TryParse(parts[1].Replace(" м²", "").Trim(), out area);
+                    advert.AreaFull = area;
+
+                    var floors = parts[2].Replace(" эт.", "").Trim().Split('/');
+
+                    int floor;
+                    Int32.TryParse(floors[0], out floor);
+                    advert.Floor = (short)floor;
+
+                    int floorfull;
+                    Int32.TryParse(floors[1], out floorfull);
+                    advert.FloorTotal = (short)floorfull;
+
+                }
+                else
+                    throw new Exception("unknow header");
+
+            }
+            else
+                throw new Exception("none header");
+        }
+
+        private Advert Parse(AdvertHeader header)
+        {
+            Advert advert = new Advert();
+
+            advert.DateSite = header.DateSite;
+            advert.Url = header.Url;
+
+            string result;
+            result = this.DownloadPage(advert.Url, UserAgents.GetRandomUserAgent(), null, CancellationToken.None);
+
+            Console.WriteLine("Downloaded description");
+            HtmlDocument page = new HtmlDocument();
+            page.LoadHtml(result);
+
+            Console.WriteLine("parsed description");
+
+            ParseTitle(page, advert);
+
+
+
+            return advert;
         }
 
         private string Normalize(string htmlValue)
