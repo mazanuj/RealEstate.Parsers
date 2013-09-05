@@ -5,6 +5,12 @@ using System.Text;
 
 namespace RealEstate.Parsing
 {
+    public class AdvertHeader
+    {
+        public string Url { get; set; }
+        public DateTime DateSite { get; set; }
+    }
+
     public class Advert
     {
         public int Id { get; set; }
