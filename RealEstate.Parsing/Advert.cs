@@ -26,7 +26,7 @@ namespace RealEstate.Parsing
         public Int64 Price { get; set; } //+
 
         public string Name { get; set; }  //+
-        public string PhoneNumber { get; set; }
+        public string PhoneNumber { get; set; } //+
         public string Email { get; set; }
 
         public string City { get; set; } //+
@@ -59,16 +59,17 @@ namespace RealEstate.Parsing
         public DateTime DateSite{ get; set; } //+
         public DateTime DateUpdate { get; set; } //+
 
-        public virtual ICollection<Image> Images { get; set; }
+        public virtual ICollection<Image> Images { get; set; } //+
 
         public override string ToString()
         {
             return String.Format(
-                "Rooms: {0}, Area: {1:#.0#}, Floor: {2}, Floor total: {3}, Seller: {4}, "
-              + "City: {5} , Adress: {6}, Metro: {7}, AdverType: {8}, UsedType: {9},Price: {10}", 
+                "Rooms: '{0}', Area: '{1:#.0#}', Floor: '{2}', Floor total: '{3}', Seller: '{4}', "
+              + "City: '{5}' , Adress: '{6}', Metro: '{7}', AdverType: '{8}', UsedType: '{9}',Price: '{10}',"
+              + "Phone: '{11}', RealEstateType: '{12}'", 
                 this.Rooms, this.AreaFull, this.Floor, this.FloorTotal, this.Name, 
                 this.City, this.Address, this.MetroStation, this.AdvertType, this.Usedtype ,
-                this.Price );
+                this.Price, this.PhoneNumber, this.RealEstateType );
         }
 
     }
@@ -85,7 +86,7 @@ namespace RealEstate.Parsing
     public enum RealEstateType
     {
         All,
-        Flat,
+        Apartments,
         House
     }
 

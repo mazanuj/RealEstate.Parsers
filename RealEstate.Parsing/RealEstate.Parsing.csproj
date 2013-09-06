@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Advert.cs" />
     <Compile Include="Parsers\AvitoParser.cs" />
+    <Compile Include="Parsers\HandsParser.cs" />
     <Compile Include="Parsers\ParserBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UserAgents.cs" />
@@ -54,9 +55,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\RealEstateParser.Ocr\RealEstateParser.Ocr.csproj">
+    <ProjectReference Include="..\RealEstateParser.Ocr\RealEstate.Parsing.Ocr.csproj">
       <Project>{7484b111-f74b-4b72-a5f2-e3ca7908037e}</Project>
-      <Name>RealEstateParser.Ocr</Name>
+      <Name>RealEstate.Parsing.Ocr</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

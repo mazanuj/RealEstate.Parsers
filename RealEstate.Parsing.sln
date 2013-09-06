@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealEstate.Parsing.UI", "Re
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealEstate.Parsing.Tests", "RealEstate.Parsing.Tests\RealEstate.Parsing.Tests.csproj", "{6E9A2476-0ED7-4572-A80E-DCEB9A13BADF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealEstateParser.Ocr", "RealEstateParser.Ocr\RealEstateParser.Ocr.csproj", "{7484B111-F74B-4B72-A5F2-E3CA7908037E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealEstate.Parsing.Ocr", "RealEstateParser.Ocr\RealEstate.Parsing.Ocr.csproj", "{7484B111-F74B-4B72-A5F2-E3CA7908037E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -7,8 +7,8 @@
     <ProjectGuid>{7484B111-F74B-4B72-A5F2-E3CA7908037E}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>RealEstateParser.Ocr</RootNamespace>
-    <AssemblyName>RealEstateParser.Ocr</AssemblyName>
+    <RootNamespace>RealEstate.Parsing.Ocr</RootNamespace>
+    <AssemblyName>RealEstate.Parsing.Ocr</AssemblyName>
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -45,7 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
+    <Compile Include="OCRs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

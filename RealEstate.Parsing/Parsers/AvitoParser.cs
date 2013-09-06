@@ -15,6 +15,7 @@ namespace RealEstate.Parsing.Parsers
 {
     public class AvitoParser : ParserBase
     {
+
         protected override Advert ParseAdvertHtml(HtmlAgilityPack.HtmlNode advertNode)
         {
             throw new NotImplementedException();
@@ -30,89 +31,11 @@ namespace RealEstate.Parsing.Parsers
             throw new NotImplementedException();
         }
 
-        public string DownloadPage(string url, string userAgent, WebProxy proxy, CancellationToken cs)
-        {
-            Trace.WriteLine("Sending request to " + url);
-
-            string HtmlResult = null;
-
-            HttpWebRequest myHttpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-            myHttpWebRequest.AllowAutoRedirect = true;
-            myHttpWebRequest.Proxy = proxy ?? WebRequest.DefaultWebProxy;
-            myHttpWebRequest.UserAgent = userAgent;
-
-            var asyncResult = myHttpWebRequest.BeginGetResponse(null, null);
-
-            WaitHandle.WaitAny(new[] { asyncResult.AsyncWaitHandle, cs.WaitHandle });
-            if (cs.IsCancellationRequested)
-            {
-                myHttpWebRequest.Abort();
-                throw new OperationCanceledException();
-            }
-
-            var myHttpWebResponse = myHttpWebRequest.EndGetResponse(asyncResult);
-            System.IO.StreamReader sr = new System.IO.StreamReader(myHttpWebResponse.GetResponseStream());
-            HtmlResult = sr.ReadToEnd();
-            sr.Close();
-            Trace.WriteLine("Response is received");
-
-            return HtmlResult;
-
-        }
-
-        public byte[] DownloadImage(string url, string userAgent, WebProxy proxy, CancellationToken cs)
-        {
-            Trace.WriteLine("Sending request to " + url);
-
-            string HtmlResult = null;
-
-            HttpWebRequest myHttpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-            myHttpWebRequest.AllowAutoRedirect = true;
-            myHttpWebRequest.Proxy = proxy ?? WebRequest.DefaultWebProxy;
-            myHttpWebRequest.UserAgent = userAgent;
-
-            var asyncResult = myHttpWebRequest.BeginGetResponse(null, null);
-
-            WaitHandle.WaitAny(new[] { asyncResult.AsyncWaitHandle, cs.WaitHandle });
-            if (cs.IsCancellationRequested)
-            {
-                myHttpWebRequest.Abort();
-                throw new OperationCanceledException();
-            }
-
-            byte[] result;
-            byte[] buffer = new byte[4096];
-
-            using (WebResponse response = myHttpWebRequest.EndGetResponse(asyncResult))
-            {
-                using (Stream responseStream = response.GetResponseStream())
-                {
-                    using (MemoryStream memoryStream = new MemoryStream())
-                    {
-                        int count = 0;
-                        do
-                        {
-                            count = responseStream.Read(buffer, 0, buffer.Length);
-                            memoryStream.Write(buffer, 0, count);
-
-                        } while (count != 0);
-
-                        result = memoryStream.ToArray();
-
-                    }
-                }
-            }
-
-            Trace.WriteLine("Response is received");
-
-            return result;
-        }
-
         public void Test()
         {
             //var url = "http://www.avito.ru/moskva/kvartiry/prodam/vtorichka?s=1";
-            //var url = "http://www.avito.ru/moskva/kvartiry/prodam/studii/vtorichka?s=1";
-            var url = "http://www.avito.ru/moskva/kvartiry/prodam/novostroyka?s=1";
+            var url = "http://www.avito.ru/moskva/kvartiry/prodam/studii/vtorichka?s=1";
+            //var url = "http://www.avito.ru/moskva/kvartiry/prodam/novostroyka?s=1";
             //var url = "http://www.avito.ru/moskva/kvartiry/prodam?s=1";
 
             var toDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day).AddDays(0);
@@ -126,7 +49,7 @@ namespace RealEstate.Parsing.Parsers
                 adverts.Add(Parse(head));
             }
 
-            adverts.ForEach(s => Console.WriteLine(s.ToString()));
+            adverts.ForEach(s => Console.WriteLine(s.ToString() + "\r\n"));
 
         }
 
@@ -320,7 +243,7 @@ namespace RealEstate.Parsing.Parsers
             {
                 var city = cityLabel.ChildNodes.First(s => s.Name == "a");
                 if (city != null)
-                    return Normalize(city.InnerText);
+                    return Normalize(city.InnerText).TrimEnd(new[]{',',' '});
             }
 
             return null;
@@ -398,6 +321,22 @@ namespace RealEstate.Parsing.Parsers
             return subTypeMap.ContainsKey(param) ? subTypeMap[param] : Usedtype.None;
         }
 
+        private static RealEstateType MapRealEstateType(string param)
+        {
+            var typeMap = new Dictionary<string, RealEstateType> {
+                { "201_1058", RealEstateType.Apartments },
+                { "201_1060", RealEstateType.Apartments },
+                { "201_1061", RealEstateType.Apartments },
+                { "201_1059", RealEstateType.Apartments },
+                { "202_1064", RealEstateType.House },
+                { "202_1065", RealEstateType.House },
+                { "202_1063", RealEstateType.House },
+                { "202_1066", RealEstateType.House },
+            };
+
+            return typeMap.ContainsKey(param) ? typeMap[param] : RealEstateType.All;
+        }
+
         private void ParseCategory(HtmlDocument full, Advert advert)
         {
             var nodes = full.DocumentNode.SelectNodes(@"//dl[@class='description description-expanded']/dd[@class='item-params c-1']/div/a");
@@ -418,14 +357,18 @@ namespace RealEstate.Parsing.Parsers
                                 if (type != AdvertType.All)
                                 {
                                     advert.AdvertType = type;
-                                    continue;
                                 }
 
                                 var usedType = MapUsedtype(param);
                                 if (usedType != Usedtype.None)
                                 {
                                     advert.Usedtype = usedType;
-                                    continue;
+                                }
+
+                                var realEstateType = MapRealEstateType(param);
+                                if (realEstateType != RealEstateType.All)
+                                {
+                                    advert.RealEstateType = realEstateType;
                                 }
                             }
 
@@ -515,22 +458,21 @@ namespace RealEstate.Parsing.Parsers
             return null;
         }
 
-        private string ParsePhone(HtmlDocument full)
+        private void ParsePhone(HtmlDocument full, Advert advert)
         {
             var itemId = Normalize(full.GetElementbyId("item_id").InnerText);
 
             var phoneUrl = ParsePhoneImageUrl(full, itemId);
             if (phoneUrl != null)
             {
-                var phoneImage = DownloadImage(phoneUrl, UserAgents.GetRandomUserAgent(), null, CancellationToken.None);
-                var phoneText = new RealEstateParser.Ocr.AvitoOcr().Recognize(phoneImage);
+                var phoneImage = DownloadImage(phoneUrl, UserAgents.GetRandomUserAgent(), null, CancellationToken.None, advert.Url);
+                var phoneText = new StringBuilder(new RealEstate.Parsing.Ocr.AvitoOcr().Recognize(phoneImage));
 
-                System.IO.File.WriteAllBytes(@"c:/test/" + phoneImage.GetHashCode() + ".png", phoneImage);
+                //System.IO.File.WriteAllBytes(@"c:/test/" + phoneImage.GetHashCode() + ".png", phoneImage);
 
-                //return new PhoneParser().Parse(phoneText);
+                phoneText.Replace("-", "");
+                advert.PhoneNumber = phoneText.ToString();
             }
-
-            return null;
         }
 
         private Advert Parse(AdvertHeader header)
@@ -563,7 +505,7 @@ namespace RealEstate.Parsing.Parsers
             advert.Price = ParsePrice(page);
 
             advert.Images = ParsePhotos(page);
-            advert.PhoneNumber = ParsePhone(page);
+            ParsePhone(page, advert);
 
             return advert;
         }
