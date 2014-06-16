@@ -46,7 +46,7 @@ namespace RealEstate.Parsing
         public short Floor { get; set; } //+
         public short FloorTotal { get; set; } //+
 
-        public RealEstateType RealEstateType { get; set; } //+
+        public RealEstateType RealEstateType { get; set; }
         public Usedtype Usedtype { get; set; } //+
         public AdvertType AdvertType { get; set; } //+
 
